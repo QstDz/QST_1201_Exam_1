@@ -31,7 +31,8 @@ public class ipjiaoji {
 			FileSplit filesplit=(FileSplit) context.getInputSplit();
 			String filename=filesplit.getPath().getName();
 			if(filename.equals("ip_time")){
-      //根据文件名为ip的value打上标签，在reduce中根据是否含有两个标签来判断是否为两个文件中相同的ip
+      //根据文件名为ip的value打上标签，在reduce中根据是否含有两个标签来判断是否为两个文件中相同的ip。这样来按每个ip当key进行聚合，无需利用set去重
+      //也可以省一些资源开销
         String line = value.toString();
 				String ip = line.split("\t")[0];
 				context.write(new Text(ip), new Text("ip1"));
