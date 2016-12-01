@@ -1,0 +1,91 @@
+package exam;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeMap;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.FileSplit;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+public class ipjiaoji {
+
+	public static class Map extends Mapper<LongWritable, Text, Text, Text>{
+		@Override
+		protected void map(LongWritable key, Text value,
+				Context context)
+				throws IOException, InterruptedException {			
+			
+			FileSplit filesplit=(FileSplit) context.getInputSplit();
+			String filename=filesplit.getPath().getName();
+			if(filename.equals("ip_time")){
+      //根据文件名为ip的value打上标签，在reduce中根据是否含有两个标签来判断是否为两个文件中相同的ip
+        String line = value.toString();
+				String ip = line.split("\t")[0];
+				context.write(new Text(ip), new Text("ip1"));
+			}else{
+				String line = value.toString();
+				String ip = line.split("\t")[0];
+				context.write(new Text(ip), new Text("ip2"));
+			}
+		}
+	}
+	
+	public static class Reduce extends Reducer<Text, Text, Text, IntWritable>{
+		private int num=0;
+		@Override
+		protected void reduce(Text key, Iterable<Text> values,
+				Context context)
+				throws IOException, InterruptedException {
+			List<String>list=new ArrayList<>();
+			for(Text value:values){
+				String line = value.toString();
+				list.add(line);
+			}
+			if(list.contains("ip1") && list.contains("ip2")){
+				num++;
+			}
+			
+		}
+		@Override
+		protected void cleanup(Context context)
+				throws IOException, InterruptedException {
+			context.write(new Text("insectition'count:"), new IntWritable(num));
+		}
+	}
+	
+	
+	public static void main(String[] args) throws IOException {
+		Configuration conf =new Configuration();
+		Job job=new Job(conf);
+		job.setJobName("ip");
+		job.setJarByClass(ipjiaoji.class);
+		job.setMapperClass(Map.class);	
+		job.setReducerClass(Reduce.class);
+		job.setNumReduceTasks(1);
+		FileInputFormat.addInputPath(job, new Path(args[0]));
+		FileOutputFormat.setOutputPath(job, new Path(args[1]));
+		job.setMapOutputKeyClass(Text.class);
+		job.setMapOutputValueClass(Text.class);	
+		job.setOutputKeyClass(Text.class);
+		job.setOutputValueClass(IntWritable.class);
+		try {
+			System.exit(job.waitForCompletion(true)?0:1);
+		} catch (ClassNotFoundException | InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}	
+}
