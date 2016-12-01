@@ -8,6 +8,7 @@ import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
@@ -18,7 +19,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 public class ipquchong {
 
-	public static class Map extends Mapper<LongWritable, Text, Text, Text>{
+	public static class Map extends Mapper<LongWritable, Text, Text,IntWritable>{
 		private HashSet<String>set=new HashSet<>();
 		@Override
 		protected void map(LongWritable key, Text value,
@@ -35,8 +36,8 @@ public class ipquchong {
 				throws IOException, InterruptedException {
 			//因为只需要去重，所以map处理一遍取到ip存到hashset中去重，直接输出hashset的长度就好了，不需要reduce了。
 			//需要注意的是要在cleanup中做输出，因为cleanup是在map任务跑完之后才做的，否则会丢失数据
-			String size=String.valueOf(set.size());
-			context.write(new Text(size), new Text(""));
+			
+			context.write(new Text("ip's counters:"), new IntWritable(set.size()));
 		}
 		
 	}
@@ -52,7 +53,7 @@ public class ipquchong {
 		FileInputFormat.addInputPath(job, new Path(args[0]));
 		FileOutputFormat.setOutputPath(job, new Path(args[1]));
 		job.setMapOutputKeyClass(Text.class);
-		job.setMapOutputValueClass(Text.class);		
+		job.setMapOutputValueClass(IntWritable.class);		
 		try {
 			System.exit(job.waitForCompletion(true)?0:1);
 		} catch (ClassNotFoundException | InterruptedException e) {
